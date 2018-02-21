@@ -12,6 +12,9 @@ import com.facebook.react.bridge.JavaScriptModule;
 
 public class RNSyncPackage implements ReactPackage {
 
+    public List<Class<? extends JavaScriptModule>> createJSModules() {
+        return Collections.emptyList();
+    }
 
     @Override
     public List<ViewManager> createViewManagers(ReactApplicationContext reactContext) {
