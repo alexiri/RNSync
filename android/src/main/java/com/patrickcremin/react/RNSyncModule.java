@@ -1,42 +1,45 @@
 package com.patrickcremin.react;
 
-import com.cloudant.sync.query.QueryException;
-import com.facebook.react.bridge.Callback;
-import com.facebook.react.bridge.ReactApplicationContext;
-import com.facebook.react.bridge.ReactContextBaseJavaModule;
-import com.facebook.react.bridge.ReactMethod;
-import com.facebook.react.bridge.ReadableMap;
-import com.facebook.react.bridge.ReadableArray;
-import com.facebook.react.bridge.WritableArray;
-import com.facebook.react.bridge.WritableMap;
-import com.facebook.react.bridge.Arguments;
-import com.facebook.react.bridge.ReadableNativeMap;
+import android.content.Context;
+import android.util.Log;
 
-import com.cloudant.sync.query.QueryResult;
-import com.cloudant.sync.documentstore.DocumentStore;
 import com.cloudant.sync.documentstore.DocumentBodyFactory;
-
 import com.cloudant.sync.documentstore.DocumentRevision;
+import com.cloudant.sync.documentstore.DocumentStore;
 import com.cloudant.sync.documentstore.UnsavedFileAttachment;
 import com.cloudant.sync.event.Subscribe;
 import com.cloudant.sync.event.notifications.ReplicationCompleted;
 import com.cloudant.sync.event.notifications.ReplicationErrored;
+import com.cloudant.sync.query.FieldSort;
+import com.cloudant.sync.query.QueryException;
+import com.cloudant.sync.query.QueryResult;
+import com.cloudant.sync.query.Tokenizer;
 import com.cloudant.sync.replication.Replicator;
 import com.cloudant.sync.replication.ReplicatorBuilder;
+import com.facebook.react.bridge.Arguments;
+import com.facebook.react.bridge.Callback;
+import com.facebook.react.bridge.ReactApplicationContext;
+import com.facebook.react.bridge.ReactContextBaseJavaModule;
+import com.facebook.react.bridge.ReactMethod;
+import com.facebook.react.bridge.ReadableArray;
+import com.facebook.react.bridge.ReadableMap;
+import com.facebook.react.bridge.ReadableMapKeySetIterator;
+import com.facebook.react.bridge.ReadableNativeMap;
+import com.facebook.react.bridge.WritableArray;
+import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeArray;
-
 import com.google.gson.Gson;
 
-import android.content.Context;
-
 import java.io.File;
-
 import java.net.URI;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 class Listener {
 
@@ -89,9 +92,7 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
                     .getDir(datastoreDir, Context.MODE_PRIVATE);
             ds = DocumentStore.getInstance(new File(path, datastoreName));
             uri = new URI(databaseUrl);
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             callback.invoke(e.getMessage());
             return;
         }
@@ -124,12 +125,9 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
                 callback.invoke(null, String.format("Replicated %d documents in %d batches",
                         listener.documentsReplicated, listener.batchesReplicated));
             }
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             callback.invoke(e.getMessage());
-        }
-        finally {
+        } finally {
             replicator.getEventBus().unregister(listener);
         }
     }
@@ -159,12 +157,9 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
                         listener.documentsReplicated, listener.batchesReplicated));
             }
 
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             callback.invoke(e.getMessage());
-        }
-        finally {
+        } finally {
             replicator.getEventBus().unregister(listener);
         }
     }
@@ -178,15 +173,13 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
 
         if (id != null && !id.isEmpty()) {
             revision = new DocumentRevision(id);
-        }
-        else {
+        } else {
             revision = new DocumentRevision();
         }
 
-        if(body == null) {
+        if (body == null) {
             revision.setBody(DocumentBodyFactory.create(new HashMap<String, Object>()));
-        }
-        else{
+        } else {
             revision.setBody(DocumentBodyFactory.create(nativeBody.toHashMap()));
         }
 
@@ -196,9 +189,7 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
             WritableMap doc = this.createWritableMapFromHashMap(this.createDoc(saved));
 
             callback.invoke(null, doc);
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             callback.invoke(e.getMessage());
         }
     }
@@ -207,7 +198,7 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void addAttachment(String id, String name, String path, String type, Callback callback) {
 
-        try{
+        try {
             DocumentRevision revision = ds.database().read(id);
 
             // Add an attachment -- binary data like a JPEG
@@ -220,23 +211,21 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
 
             WritableMap doc = this.createWritableMapFromHashMap(this.createDoc(updated));
 
-            callback.invoke(null, doc );
-        }
-        catch (Exception e) {
+            callback.invoke(null, doc);
+        } catch (Exception e) {
             callback.invoke(e.getMessage());
         }
     }
 
     @ReactMethod
     public void retrieve(String id, Callback callback) {
-        try{
+        try {
             DocumentRevision revision = ds.database().read(id);
 
             WritableMap doc = this.createWritableMapFromHashMap(this.createDoc(revision));
 
             callback.invoke(null, doc);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             callback.invoke(e.getMessage());
         }
     }
@@ -256,9 +245,7 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
             WritableMap doc = this.createWritableMapFromHashMap(this.createDoc(updated));
 
             callback.invoke(null, doc);
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             callback.invoke(e.getMessage());
         }
     }
@@ -272,9 +259,7 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
             ds.database().delete(revision);
 
             callback.invoke();
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             callback.invoke(e.getMessage());
         }
     }
@@ -313,8 +298,7 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
         }
     }
 
-    private HashMap<String, Object> createDoc(DocumentRevision revision)
-    {
+    private HashMap<String, Object> createDoc(DocumentRevision revision) {
         HashMap<String, Object> doc = new HashMap<>();
         doc.put("id", revision.getId());
         doc.put("rev", revision.getRevision());
@@ -364,10 +348,10 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
                     data.putMap(key, (WritableMap) value);
                     break;
                 case "java.util.HashMap":
-                    data.putMap(key, this.createWritableMapFromHashMap((HashMap<String, Object>)value));
+                    data.putMap(key, this.createWritableMapFromHashMap((HashMap<String, Object>) value));
                     break;
                 case "com.facebook.react.bridge.WritableNativeArray":
-                    data.putArray(key, (WritableArray)value);
+                    data.putArray(key, (WritableArray) value);
             }
         }
 
