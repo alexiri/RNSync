@@ -12,8 +12,8 @@ You can get an instance of [Cloudant](http://bit.ly/2eH8lbY) by creating an acco
 RNSync only supports ReactNative > 0.40
 
 RNSync works with [Redux Persist](https://github.com/rt2zz/redux-persist).  Please read the [RNSyncStorage doc](RNSyncStorage.md) for more info.  You may also prefer the simplified API.
- 
- 
+
+
 ## Installation
 
 Install with npm
@@ -46,7 +46,7 @@ react-native link rnsync
 
 #### Init
 
-The below example exposes your credentials on every device, and the database must already exist, but it is fine for testing the package. 
+The below example exposes your credentials on every device, and the database must already exist, but it is fine for testing the package.
 
 To avoid exposing credentials create a web service to authenticate users and set up databases for client devices. This web service needs to:
 
@@ -56,7 +56,7 @@ To avoid exposing credentials create a web service to authenticate users and set
 - Return the database URL and credentials to the device.
 
 You can use the [rnsync_key_generator](https://github.com/pwcremin/rnsync_key_generator) package with your Express server to easily handle database and credentials creation. Also refer to [cloudantApiKeyGenerator](cloudantApiKeyGenerator) for an example of adding this functionality to your Express server if you do not wish to use rnsync_key_generator.
- 
+
 ```javascript
 import rnsync from 'rnsync';
 
@@ -170,9 +170,23 @@ Query for documents.  For more details on the query semantics please see the [Cl
 ```javascript
 var query = {name: 'John', age: { '$gt': 25 }};
 
-rnsync.find(query, function(docs)
+rnsync.find(query, function(error, docs)
 {
   console.log('found ' + docs.length);
+});
+```
+
+#### Create Indexes
+
+```javascript
+var indexes = {
+  "TEXT":{"textNames":["Common_name","Botanical_name"]},
+  "JSON":{"jsonNames":["Common_name","Botanical_name"]}
+};
+
+rnsync.createIndexes(indexes, function(error)
+{
+  console.log(error);
 });
 ```
 
