@@ -70,6 +70,17 @@ rnsync.init(dbUrl, dbName, function(error)
 });
 ```
 
+#### Delete Store
+
+```javascript
+import rnsync from 'rnsync';
+
+rnsync.deleteStore(function(error)
+{
+  console.log(error);
+});
+```
+
 #### Create
 
 Both the object and the id are optional.  If you leave out the object it will create a new doc that is empty.  If you leave

@@ -6,6 +6,7 @@ import android.util.Log;
 import com.cloudant.sync.documentstore.DocumentBodyFactory;
 import com.cloudant.sync.documentstore.DocumentRevision;
 import com.cloudant.sync.documentstore.DocumentStore;
+import com.cloudant.sync.documentstore.DocumentStoreNotDeletedException;
 import com.cloudant.sync.documentstore.UnsavedFileAttachment;
 import com.cloudant.sync.event.Subscribe;
 import com.cloudant.sync.event.notifications.ReplicationCompleted;
@@ -384,6 +385,18 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
                 }
             }
         });
+    }
+
+    @ReactMethod
+    public void deleteStore(Callback callback) {
+        try {
+            ds.delete();
+            callback.invoke();
+        }
+        catch (DocumentStoreNotDeletedException e) {
+            callback.invoke(e.getMessage());
+            return;
+        }
     }
 
     private static WritableMap createWritableMapFromHashMap(HashMap<String, Object> doc) {

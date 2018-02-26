@@ -332,6 +332,21 @@ class RNSyncWrapper
             } );
         });
     }
+
+    deleteStore ( callback )
+    {
+        callback = callback || noop;
+
+        return new Promise( (resolve, reject) =>
+        {
+            rnsyncModule.deleteStore( (error) =>
+            {
+                callback( error );
+                if(error) reject(error);
+                else resolve()
+            } );
+        });
+    }
 }
 
 export const rnsyncStorage = new RNSyncStorage();
