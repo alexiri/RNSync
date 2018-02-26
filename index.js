@@ -169,6 +169,23 @@ class RNSyncWrapper
         })
     }
 
+    // The callback success value is an object where the keys are the attachment names,
+    // and the values are the base64 encoded attachments
+    retrieveAttachments ( id, callback )
+    {
+        callback = callback || noop;
+
+        return new Promise( (resolve, reject) =>
+        {
+            rnsyncModule.retrieveAttachments( id, ( error, attachments ) =>
+            {
+                callback( error, attachments );
+                if(error) reject(error);
+                else resolve(attachments)
+            } );
+        })
+    }
+
     findOrCreate ( id, callback )
     {
         callback = callback || noop;

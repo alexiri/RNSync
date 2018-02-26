@@ -1,11 +1,15 @@
 package com.patrickcremin.react;
 
 import android.content.Context;
+import android.util.Base64;
 import android.util.Log;
 
+import com.cloudant.sync.documentstore.Attachment;
 import com.cloudant.sync.documentstore.DocumentBodyFactory;
+import com.cloudant.sync.documentstore.DocumentNotFoundException;
 import com.cloudant.sync.documentstore.DocumentRevision;
 import com.cloudant.sync.documentstore.DocumentStore;
+import com.cloudant.sync.documentstore.DocumentStoreException;
 import com.cloudant.sync.documentstore.DocumentStoreNotDeletedException;
 import com.cloudant.sync.documentstore.UnsavedFileAttachment;
 import com.cloudant.sync.event.Subscribe;
@@ -32,6 +36,8 @@ import com.facebook.react.bridge.WritableNativeArray;
 import com.google.gson.Gson;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -235,6 +241,43 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
             callback.invoke(null, doc);
         } catch (Exception e) {
             callback.invoke(e.getMessage());
+        }
+    }
+
+    @ReactMethod
+    public void retrieveAttachments(String id, Callback callback) {
+        try {
+            DocumentRevision revision = ds.database().read(id);
+            Map<String, Attachment> attachments = revision.getAttachments();
+            HashMap<String, Object> dataBlobs = new HashMap<>();
+            for (Map.Entry<String, Attachment> attachment : attachments.entrySet()) {
+                Attachment att = attachment.getValue();
+
+                if(att.encoding == Attachment.Encoding.Plain){
+                    InputStream inputStream = att.getInputStream();
+
+                    byte[] imageBytes = new byte[(int)inputStream.available()];
+                    inputStream.read(imageBytes, 0, imageBytes.length);
+                    inputStream.close();
+
+                    String encodedString = Base64.encodeToString(imageBytes, Base64.CRLF);
+
+                    dataBlobs.put(attachment.getKey(), "data:"+att.type+";base64,"+encodedString);
+                }
+            }
+            callback.invoke(null, RNSyncModule.createWritableMapFromHashMap(dataBlobs));
+        }
+        catch (DocumentNotFoundException e) {
+            callback.invoke(e.getMessage());
+            return;
+        }
+        catch (DocumentStoreException e) {
+            callback.invoke(e.getMessage());
+            return;
+        }
+        catch (IOException e) {
+            callback.invoke(e.getMessage());
+            return;
         }
     }
 

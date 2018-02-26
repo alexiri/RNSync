@@ -132,6 +132,23 @@ rnsync.retrieve(id, function(error, doc)
 });
 ```
 
+#### Retrieve Attachments
+
+Returns attachments for a doc with the specified ID, in the form:
+
+```javascript
+{
+  attachmentId: "base64encodedattachment"
+}
+```
+
+```javascript
+rnsync.retrieveAttachments(id, function(error, attachments)
+{
+  console.log(attachments);
+});
+```
+
 #### Update
 
 When doing an update to a doc, you must include the revision.
