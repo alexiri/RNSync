@@ -68,6 +68,13 @@ class Listener {
 
 public class RNSyncModule extends ReactContextBaseJavaModule {
 
+    private static final int MAX_THREADS = 5;
+    private static ThreadPoolExecutor executor;
+
+    static {
+        executor = new ThreadPoolExecutor(MAX_THREADS, MAX_THREADS, 1, TimeUnit.MINUTES, new ArrayBlockingQueue<Runnable>(MAX_THREADS, true));
+    }
+
     private URI uri;
     private DocumentStore ds;
 
@@ -321,7 +328,65 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
         return doc;
     }
 
-    private WritableMap createWritableMapFromHashMap(HashMap<String, Object> doc) {
+    /**
+     * @param indexes  e.g. {"TEXT":{"textNames":["Common_name","Botanical_name"]},"JSON":{"jsonNames":["Common_name","Botanical_name"]}}
+     * @param callback
+     */
+    @ReactMethod
+    public void createIndexes(final ReadableMap indexes, final Callback callback) {
+        Log.i("RNSyncModule", "createIndexes: " + indexes.toString());
+
+        final ReadableMap jsonIndexes = indexes.getMap("JSON");
+        final ReadableMap textIndexes = indexes.getMap("TEXT");
+
+        final DocumentStore ds = this.ds;
+
+        // Run on a background thread - creating indexes can take a while
+        RNSyncModule.executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (jsonIndexes != null) {
+                        ReadableMapKeySetIterator iterator = jsonIndexes.keySetIterator();
+                        while (iterator.hasNextKey()) {
+                            String key = iterator.nextKey();
+
+                            ReadableArray array = jsonIndexes.getArray(key);
+                            List<FieldSort> fields = new ArrayList<>();
+                            for (int i = 0; i < array.size(); i++) {
+                                fields.add(new FieldSort(array.getString(i)));
+                            }
+
+                            ds.query().createJsonIndex(fields, key);
+                        }
+                    }
+
+                    if (textIndexes != null) {
+                        ReadableMapKeySetIterator iterator = textIndexes.keySetIterator();
+                        while (iterator.hasNextKey()) {
+                            String key = iterator.nextKey();
+
+                            ReadableArray array = textIndexes.getArray(key);
+                            List<FieldSort> fields = new ArrayList<>();
+                            for (int i = 0; i < array.size(); i++) {
+                                fields.add(new FieldSort(array.getString(i)));
+                            }
+
+                            ds.query().createTextIndex(fields, key, new Tokenizer("porter unicode61"));
+                        }
+                    }
+
+                    ds.query().refreshAllIndexes();
+
+                    callback.invoke(null);
+                } catch (QueryException e) {
+                    callback.invoke(e.getMessage());
+                }
+            }
+        });
+    }
+
+    private static WritableMap createWritableMapFromHashMap(HashMap<String, Object> doc) {
 
         WritableMap data = Arguments.createMap();
 
@@ -348,7 +413,7 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
                     data.putMap(key, (WritableMap) value);
                     break;
                 case "java.util.HashMap":
-                    data.putMap(key, this.createWritableMapFromHashMap((HashMap<String, Object>) value));
+                    data.putMap(key, RNSyncModule.createWritableMapFromHashMap((HashMap<String, Object>) value));
                     break;
                 case "com.facebook.react.bridge.WritableNativeArray":
                     data.putArray(key, (WritableArray) value);

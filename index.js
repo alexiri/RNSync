@@ -286,7 +286,7 @@ class RNSyncWrapper
     }
 
     // For how to create a query: https://github.com/cloudant/CDTDatastore/blob/master/doc/query.md
-    // The 'fields' arugment is for projection.  Its an array of fields that you want returned when you do not want the entire doc
+    // The 'fields' argument is for projection. It's an array of fields that you want returned when you do not want the entire doc
     find ( query, fields, callback )
     {
         callback = callback || noop;
@@ -313,8 +313,26 @@ class RNSyncWrapper
 
         });
     }
+
+    /*
+     * Indexes is of the form:
+     * {"TEXT":{"textNames":["Common_name","Botanical_name"]},"JSON":{"jsonNames":["Common_name","Botanical_name"]}}
+     */
+    createIndexes ( indexes, callback )
+    {
+        callback = callback || noop;
+
+        return new Promise( (resolve, reject) =>
+        {
+            rnsyncModule.createIndexes( query, ( error ) =>
+            {
+                callback( error );
+                if(error) reject(error);
+                else resolve()
+            } );
+        });
+    }
 }
 
 export const rnsyncStorage = new RNSyncStorage();
 export default new RNSyncWrapper();
-
