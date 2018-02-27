@@ -1,26 +1,26 @@
-
 # RNSyncStorage
-
 
 ## About
 
-RNSyncStorage was made for redux-persist, but you can use it as an alteranative to RNSync if you prefer its API.  You will still need to init and replicate using RNSync.
+RNSyncStorage was made for redux-persist, but you can use it as an alternative to RNSync if you prefer its API.  You will still need to init and replicate using RNSync.
 
 ## Installation
 
 Install with npm
-```ruby
+
+```bash
 npm install --save rnsync
 ```
 
 ### iOS
 
-```ruby
+```bash
 react-native link rnsync
 ```
 
 Update your Podfile
-```ruby
+
+```bash
 pod 'CDTDatastore'
 ```
 
@@ -28,13 +28,14 @@ Pod install
 
 ### Android
 
-```ruby
+```bash
 react-native link rnsync
 ```
 
 ## Usage
 
 #### setItem
+
 ```javascript
 import rnsync, {rnsyncStorage} from 'rnsync'
 
@@ -45,6 +46,7 @@ rnsyncStorage.setItem(key, value, (error) =>
 ```
 
 #### getItem
+
 ```javascript
 
 rnsyncStorage.getItem(key, (error, value) =>
@@ -54,6 +56,7 @@ rnsyncStorage.getItem(key, (error, value) =>
 ```
 
 #### removeItem
+
 ```javascript
 
 rnsyncStorage.removeItem(key, (error) =>
@@ -63,6 +66,7 @@ rnsyncStorage.removeItem(key, (error) =>
 ```
 
 #### getAllKeys
+
 ```javascript
 
 rnsyncStorage.getAllKeys((error, keys) =>
@@ -80,7 +84,7 @@ import reducer from './redux/reducers/index'
 
 
 import {persistStore, autoRehydrate} from 'redux-persist'
-import rnsync, {rnsyncStorage} from 'rnsync'
+import rnsync, {RNSyncStorage} from 'rnsync'
 
 
 let dbUrl = "https://xxx:xxx-bluemix.cloudant.com";
@@ -90,10 +94,20 @@ rnsync.init(dbUrl, dbName, error => console.log(error) );
 
 const store = createStore(reducer, undefined, autoRehydrate());
 
-persistStore(store, {storage: rnsyncStorage});
+persistStore(store, {
+  storage: new RNSyncStorage(dbName)
+});
 ```
+
 If you want to do replication before loading the store then:
 
 ```javascript
-rnsync.replicateSync().then(() => persistStore(store, {storage: rnsyncStorage}));
+rnsync.replicateSync()
+  .then(() => persistStore(
+      store,
+      {
+        storage: new RNSyncStorage(dbName)
+      }
+    )
+  );
 ```

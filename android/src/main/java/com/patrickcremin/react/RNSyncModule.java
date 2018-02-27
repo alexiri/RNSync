@@ -11,6 +11,7 @@ import com.cloudant.sync.documentstore.DocumentRevision;
 import com.cloudant.sync.documentstore.DocumentStore;
 import com.cloudant.sync.documentstore.DocumentStoreException;
 import com.cloudant.sync.documentstore.DocumentStoreNotDeletedException;
+import com.cloudant.sync.documentstore.DocumentStoreNotOpenedException;
 import com.cloudant.sync.documentstore.UnsavedFileAttachment;
 import com.cloudant.sync.event.Subscribe;
 import com.cloudant.sync.event.notifications.ReplicationCompleted;
@@ -39,6 +40,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -73,17 +75,30 @@ class Listener {
     }
 }
 
+class Store {
+    URI replicationUri;
+    DocumentStore documentStore;
+
+    Store(URI replicationUri, DocumentStore documentStore) {
+        this.replicationUri = replicationUri;
+        this.documentStore = documentStore;
+    }
+}
+
 public class RNSyncModule extends ReactContextBaseJavaModule {
 
     private static final int MAX_THREADS = 5;
     private static ThreadPoolExecutor executor;
 
     static {
-        executor = new ThreadPoolExecutor(MAX_THREADS, MAX_THREADS, 1, TimeUnit.MINUTES, new ArrayBlockingQueue<Runnable>(MAX_THREADS, true));
+        executor = new ThreadPoolExecutor(
+                MAX_THREADS, MAX_THREADS,
+                1, TimeUnit.MINUTES,
+                new ArrayBlockingQueue<Runnable>(MAX_THREADS, true)
+        );
     }
 
-    private URI uri;
-    private DocumentStore ds;
+    private HashMap<String, Store> stores = new HashMap<>();
 
     RNSyncModule(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -96,17 +111,21 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
 
     // TODO let them name the datastore
     @ReactMethod
-    public void init(String databaseUrl, Callback callback) {
+    public void init(String databaseUrl, String datastoreName, Callback callback) {
         String datastoreDir = "datastores";
-        String datastoreName = "my_datastore";
 
         try {
             File path = super.getReactApplicationContext()
                     .getApplicationContext()
                     .getDir(datastoreDir, Context.MODE_PRIVATE);
-            ds = DocumentStore.getInstance(new File(path, datastoreName));
-            uri = new URI(databaseUrl);
-        } catch (Exception e) {
+            DocumentStore ds = DocumentStore.getInstance(new File(path, datastoreName));
+            URI uri = new URI(databaseUrl);
+
+            stores.put(datastoreName, new Store(uri, ds));
+        } catch (DocumentStoreNotOpenedException e) {
+            callback.invoke(e.getMessage());
+            return;
+        } catch (URISyntaxException e) {
             callback.invoke(e.getMessage());
             return;
         }
@@ -114,12 +133,20 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
         callback.invoke();
     }
 
-    // TODO need push and pull replication functions
     @ReactMethod
-    public void replicatePush(Callback callback) {
+    public void replicatePush(String datastoreName, Callback callback) {
+        Store store = stores.get(datastoreName);
+        if (store == null) {
+            callback.invoke("No datastore named " + datastoreName);
+            return;
+        }
+        DocumentStore ds = store.documentStore;
 
         // Replicate from the local to remote database
-        Replicator replicator = ReplicatorBuilder.push().from(ds).to(uri).build();
+        Replicator replicator = ReplicatorBuilder.push()
+                .from(ds)
+                .to(store.replicationUri)
+                .build();
 
         CountDownLatch latch = new CountDownLatch(1);
 
@@ -147,10 +174,19 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void replicatePull(Callback callback) {
+    public void replicatePull(String datastoreName, Callback callback) {
+        Store store = stores.get(datastoreName);
+        if (store == null) {
+            callback.invoke("No datastore named " + datastoreName);
+            return;
+        }
+        DocumentStore ds = store.documentStore;
 
         // Replicate from the local to remote database
-        Replicator replicator = ReplicatorBuilder.pull().from(uri).to(ds).build();
+        Replicator replicator = ReplicatorBuilder.pull()
+                .from(store.replicationUri)
+                .to(ds)
+                .build();
 
         CountDownLatch latch = new CountDownLatch(1);
 
@@ -179,7 +215,13 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void create(ReadableMap body, String id, Callback callback) {
+    public void create(String datastoreName, ReadableMap body, String id, Callback callback) {
+        Store store = stores.get(datastoreName);
+        if (store == null) {
+            callback.invoke("No datastore named " + datastoreName);
+            return;
+        }
+        DocumentStore ds = store.documentStore;
 
         ReadableNativeMap nativeBody = (ReadableNativeMap) body;
 
@@ -200,7 +242,7 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
         try {
             DocumentRevision saved = ds.database().create(revision);
 
-            WritableMap doc = this.createWritableMapFromHashMap(this.createDoc(saved));
+            WritableMap doc = RNSyncModule.createWritableMapFromHashMap(this.createDoc(saved));
 
             callback.invoke(null, doc);
         } catch (Exception e) {
@@ -210,7 +252,13 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
 
     // TODO need ability to update and remove attachments
     @ReactMethod
-    public void addAttachment(String id, String name, String path, String type, Callback callback) {
+    public void addAttachment(String datastoreName, String id, String name, String path, String type, Callback callback) {
+        Store store = stores.get(datastoreName);
+        if (store == null) {
+            callback.invoke("No datastore named " + datastoreName);
+            return;
+        }
+        DocumentStore ds = store.documentStore;
 
         try {
             DocumentRevision revision = ds.database().read(id);
@@ -223,7 +271,7 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
             revision.getAttachments().put(f.getName(), att1);
             DocumentRevision updated = ds.database().update(revision);
 
-            WritableMap doc = this.createWritableMapFromHashMap(this.createDoc(updated));
+            WritableMap doc = RNSyncModule.createWritableMapFromHashMap(this.createDoc(updated));
 
             callback.invoke(null, doc);
         } catch (Exception e) {
@@ -232,11 +280,18 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void retrieve(String id, Callback callback) {
+    public void retrieve(String datastoreName, String id, Callback callback) {
+        Store store = stores.get(datastoreName);
+        if (store == null) {
+            callback.invoke("No datastore named " + datastoreName);
+            return;
+        }
+        DocumentStore ds = store.documentStore;
+
         try {
             DocumentRevision revision = ds.database().read(id);
 
-            WritableMap doc = this.createWritableMapFromHashMap(this.createDoc(revision));
+            WritableMap doc = RNSyncModule.createWritableMapFromHashMap(this.createDoc(revision));
 
             callback.invoke(null, doc);
         } catch (Exception e) {
@@ -245,7 +300,14 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void retrieveAttachments(String id, Callback callback) {
+    public void retrieveAttachments(String datastoreName, String id, Callback callback) {
+        Store store = stores.get(datastoreName);
+        if (store == null) {
+            callback.invoke("No datastore named " + datastoreName);
+            return;
+        }
+        DocumentStore ds = store.documentStore;
+
         try {
             DocumentRevision revision = ds.database().read(id);
             Map<String, Attachment> attachments = revision.getAttachments();
@@ -282,7 +344,13 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void update(String id, String rev, ReadableMap body, Callback callback) {
+    public void update(String datastoreName, String id, String rev, ReadableMap body, Callback callback) {
+        Store store = stores.get(datastoreName);
+        if (store == null) {
+            callback.invoke("No datastore named " + datastoreName);
+            return;
+        }
+        DocumentStore ds = store.documentStore;
 
         try {
             DocumentRevision revision = ds.database().read(id);
@@ -293,7 +361,7 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
 
             DocumentRevision updated = ds.database().update(revision);
 
-            WritableMap doc = this.createWritableMapFromHashMap(this.createDoc(updated));
+            WritableMap doc = RNSyncModule.createWritableMapFromHashMap(this.createDoc(updated));
 
             callback.invoke(null, doc);
         } catch (Exception e) {
@@ -302,7 +370,13 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void delete(String id, Callback callback) {
+    public void delete(String datastoreName, String id, Callback callback) {
+        Store store = stores.get(datastoreName);
+        if (store == null) {
+            callback.invoke("No datastore named " + datastoreName);
+            return;
+        }
+        DocumentStore ds = store.documentStore;
 
         try {
             DocumentRevision revision = ds.database().read(id);
@@ -316,7 +390,13 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void find(ReadableMap query, ReadableArray fields, Callback callback) {
+    public void find(String datastoreName, ReadableMap query, ReadableArray fields, Callback callback) {
+        Store store = stores.get(datastoreName);
+        if (store == null) {
+            callback.invoke("No datastore named " + datastoreName);
+            return;
+        }
+        DocumentStore ds = store.documentStore;
 
         try {
             ReadableNativeMap nativeQuery = (ReadableNativeMap) query;
@@ -324,14 +404,14 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
             QueryResult result;
 
             if (fields == null) {
-                result = this.ds.query().find(nativeQuery.toHashMap(), 0, 0, null, null);
+                result = ds.query().find(nativeQuery.toHashMap(), 0, 0, null, null);
             } else {
                 List<String> fieldsList = new ArrayList<>();
                 for (int i = 0; i < fields.size(); i++) {
                     fieldsList.add(fields.getString(i));
                 }
 
-                result = this.ds.query().find(nativeQuery.toHashMap(), 0, 0, fieldsList, null);
+                result = ds.query().find(nativeQuery.toHashMap(), 0, 0, fieldsList, null);
             }
 
             WritableArray docs = new WritableNativeArray();
@@ -377,13 +457,18 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
      * @param callback
      */
     @ReactMethod
-    public void createIndexes(final ReadableMap indexes, final Callback callback) {
+    public void createIndexes(final String datastoreName, final ReadableMap indexes, final Callback callback) {
         Log.i("RNSyncModule", "createIndexes: " + indexes.toString());
+
+        Store store = stores.get(datastoreName);
+        if (store == null) {
+            callback.invoke("No datastore named " + datastoreName);
+            return;
+        }
+        final DocumentStore ds = store.documentStore;
 
         final ReadableMap jsonIndexes = indexes.getMap("JSON");
         final ReadableMap textIndexes = indexes.getMap("TEXT");
-
-        final DocumentStore ds = this.ds;
 
         // Run on a background thread - creating indexes can take a while
         RNSyncModule.executor.execute(new Runnable() {
@@ -431,7 +516,14 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void deleteStore(Callback callback) {
+    public void deleteStore(String datastoreName, Callback callback) {
+        Store store = stores.get(datastoreName);
+        if (store == null) {
+            callback.invoke("No datastore named " + datastoreName);
+            return;
+        }
+        DocumentStore ds = store.documentStore;
+
         try {
             ds.delete();
             callback.invoke();
