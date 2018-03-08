@@ -479,7 +479,7 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
 
                     ds.query().refreshAllIndexes();
 
-                    callback.invoke(null);
+                    callback.invoke();
                 } catch (QueryException e) {
                     callback.invoke(e.getMessage());
                 }

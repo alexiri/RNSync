@@ -296,11 +296,11 @@ class RNSyncWrapper
 
         return new Promise( (resolve, reject) =>
         {
-            rnsyncModule.replicatePull( datastoreName, (error) =>
+            rnsyncModule.replicatePull( datastoreName, (error, msg) =>
             {
-                callback( error );
+                callback( error, msg );
                 if(error) reject(error);
-                else resolve()
+                else resolve(msg)
             })
         });
     }
@@ -344,7 +344,7 @@ class RNSyncWrapper
 
         return new Promise( (resolve, reject) =>
         {
-            rnsyncModule.createIndexes( datastoreName, query, ( error ) =>
+            rnsyncModule.createIndexes( datastoreName, indexes, ( error ) =>
             {
                 callback( error );
                 if(error) reject(error);
