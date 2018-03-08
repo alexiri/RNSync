@@ -13,9 +13,6 @@ import com.cloudant.sync.documentstore.DocumentStoreException;
 import com.cloudant.sync.documentstore.DocumentStoreNotDeletedException;
 import com.cloudant.sync.documentstore.DocumentStoreNotOpenedException;
 import com.cloudant.sync.documentstore.UnsavedFileAttachment;
-import com.cloudant.sync.event.Subscribe;
-import com.cloudant.sync.event.notifications.ReplicationCompleted;
-import com.cloudant.sync.event.notifications.ReplicationErrored;
 import com.cloudant.sync.query.FieldSort;
 import com.cloudant.sync.query.QueryException;
 import com.cloudant.sync.query.QueryResult;
@@ -49,31 +46,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
-class Listener {
-
-    private final CountDownLatch latch;
-    Throwable error = null;
-    int documentsReplicated;
-    int batchesReplicated;
-
-    Listener(CountDownLatch latch) {
-        this.latch = latch;
-    }
-
-    @Subscribe
-    public void complete(ReplicationCompleted event) {
-        this.documentsReplicated = event.documentsReplicated;
-        this.batchesReplicated = event.batchesReplicated;
-        latch.countDown();
-    }
-
-    @Subscribe
-    public void error(ReplicationErrored event) {
-        this.error = event.errorInfo;
-        latch.countDown();
-    }
-}
 
 class Store {
     URI replicationUri;
