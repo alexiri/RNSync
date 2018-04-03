@@ -217,7 +217,7 @@ RCT_EXPORT_METHOD(retrieve: (NSString*) databaseName id: (NSString *)id  callbac
     }
 }
 
-RCT_EXPORT_METHOD(retrieveAllAttachmentsFor: (NSString*) databaseName id: (NSString *)id callback:(RCTResponseSenderBlock)callback)
+RCT_EXPORT_METHOD(retrieveAttachments: (NSString*) databaseName id: (NSString *)id callback:(RCTResponseSenderBlock)callback)
 {
     NSError *error = nil;
     
@@ -302,7 +302,7 @@ RCT_EXPORT_METHOD(delete:(NSString*) databaseName id: (NSString *)id callback:(R
     }
 }
 
-RCT_EXPORT_METHOD(deleteDatastoreWithName:(NSString*) databaseName callback:(RCTResponseSenderBlock)callback)
+RCT_EXPORT_METHOD(deleteStore:(NSString*) databaseName callback:(RCTResponseSenderBlock)callback)
 {
     NSError *error = nil;
     
