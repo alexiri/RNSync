@@ -19,7 +19,6 @@ import com.cloudant.sync.query.QueryResult;
 import com.cloudant.sync.query.Tokenizer;
 import com.cloudant.sync.replication.Replicator;
 import com.cloudant.sync.replication.ReplicatorBuilder;
-import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
@@ -31,7 +30,12 @@ import com.facebook.react.bridge.ReadableNativeMap;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeArray;
+import com.facebook.react.bridge.WritableNativeMap;
 import com.google.gson.Gson;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,6 +44,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -506,40 +511,66 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
         }
     }
 
-    private static WritableMap createWritableMapFromHashMap(HashMap<String, Object> doc) {
+    private static WritableArray convertJsonToArray(JSONArray jsonArray) throws JSONException {
+        WritableArray array = new WritableNativeArray();
 
-        WritableMap data = Arguments.createMap();
+        for (int i = 0; i < jsonArray.length(); i++) {
+            Object value = jsonArray.get(i);
+            if (value instanceof JSONObject) {
+                array.pushMap(convertJsonToMap((JSONObject) value));
+            } else if (value instanceof JSONArray) {
+                array.pushArray(convertJsonToArray((JSONArray) value));
+            } else if (value instanceof Boolean) {
+                array.pushBoolean((Boolean) value);
+            } else if (value instanceof Integer) {
+                array.pushInt((Integer) value);
+            } else if (value instanceof Double) {
+                array.pushDouble((Double) value);
+            } else if (value instanceof String)  {
+                array.pushString((String) value);
+            } else {
+                array.pushString(value.toString());
+            }
+        }
+        return array;
+    }
 
-        for (Map.Entry<String, Object> entry : doc.entrySet()) {
-            String key = entry.getKey();
-            Object value = entry.getValue();
+    private static WritableMap convertJsonToMap(JSONObject jsonObject) throws JSONException {
+        WritableMap map = new WritableNativeMap();
 
-            String typeName = value.getClass().getName();
-
-            switch (typeName) {
-                case "java.lang.Boolean":
-                    data.putBoolean(key, (Boolean) value);
-                    break;
-                case "java.lang.Integer":
-                    data.putInt(key, (Integer) value);
-                    break;
-                case "java.lang.Double":
-                    data.putDouble(key, (Double) value);
-                    break;
-                case "java.lang.String":
-                    data.putString(key, (String) value);
-                    break;
-                case "com.facebook.react.bridge.WritableNativeMap":
-                    data.putMap(key, (WritableMap) value);
-                    break;
-                case "java.util.HashMap":
-                    data.putMap(key, RNSyncModule.createWritableMapFromHashMap((HashMap<String, Object>) value));
-                    break;
-                case "com.facebook.react.bridge.WritableNativeArray":
-                    data.putArray(key, (WritableArray) value);
+        Iterator<String> iterator = jsonObject.keys();
+        while (iterator.hasNext()) {
+            String key = iterator.next();
+            Object value = jsonObject.get(key);
+            if (value instanceof JSONObject) {
+                map.putMap(key, convertJsonToMap((JSONObject) value));
+            } else if (value instanceof JSONArray) {
+                map.putArray(key, convertJsonToArray((JSONArray) value));
+            } else if (value instanceof Boolean) {
+                map.putBoolean(key, (Boolean) value);
+            } else if (value instanceof Integer) {
+                map.putInt(key, (Integer) value);
+            } else if (value instanceof Double) {
+                map.putDouble(key, (Double) value);
+            } else if (value instanceof String)  {
+                map.putString(key, (String) value);
+            } else {
+                map.putString(key, value.toString());
             }
         }
 
-        return data;
+        return map;
+    }
+
+    private static WritableMap createWritableMapFromHashMap(HashMap<String, Object> doc) {
+        try {
+            JSONObject jsonObject = new JSONObject(new Gson().toJson(doc));
+
+            return convertJsonToMap(jsonObject);
+        } catch (JSONException e) {
+            Log.e("RNSyncModule", "Failed to create WriteableMap from document");
+
+            throw new RuntimeException(e);
+        }
     }
 }
