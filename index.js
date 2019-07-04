@@ -5,24 +5,28 @@ const noop = () =>
 {
 };
 
-class RNSyncStorage
-{
-    setItem( key, value, callback )
+export class RNSyncStorage {
+
+    constructor(datastoreName) {
+        this.datastoreName = datastoreName
+    }
+
+    setItem ( key, value, callback )
     {
         callback = callback || noop;
 
         // value is a string, but we need a data blob
         let body = { value }
 
-        rnsyncModule.retrieve( key, ( error, doc ) =>
+        rnsyncModule.retrieve( this.datastoreName, key, ( error, doc ) =>
         {
             if ( error )     // should be 404
             {
-                rnsyncModule.create( body, key, callback );
+                rnsyncModule.create( this.datastoreName, body, key, callback );
             }
             else
             {
-                rnsyncModule.update( doc.id, doc.key, body, callback );
+                rnsyncModule.update( this.datastoreName, doc.id, doc.key, body, callback );
             }
         } );
     }
@@ -31,7 +35,7 @@ class RNSyncStorage
     {
         callback = callback || noop;
 
-        rnsyncModule.retrieve( key, ( error, doc ) =>
+        rnsyncModule.retrieve( this.datastoreName, key, ( error, doc ) =>
         {
             let item = error ? null : doc.body.value;
 
@@ -44,7 +48,7 @@ class RNSyncStorage
     {
         callback = callback || noop;
 
-        rnsyncModule.delete( key, callback );
+        rnsyncModule.delete( this.datastoreName, key, callback );
     }
 
     getAllKeys( callback )
@@ -54,7 +58,7 @@ class RNSyncStorage
         // using _id as the field isn't right (since the body doesn't contain an _id) but
         // it keeps the body from returning since the field doesn't exist
         // TODO try ' '?
-        rnsyncModule.find( { '_id': { '$exists': true } }, [ '_id' ], ( error, docs ) =>
+        rnsyncModule.find( this.datastoreName, {'_id': {'$exists': true } }, ['_id'], ( error, docs ) =>
         {
             if ( error )
             {
@@ -101,7 +105,7 @@ class RNSyncStorage
 
 export class RNSync
 {
-    constructor( cloudantServerUrl, databaseName )
+    init ( cloudantServerUrl, datastoreName, callback )
     {
         this.databaseUrl = cloudantServerUrl + '/' + databaseName
         this.databaseName = databaseName
@@ -111,18 +115,18 @@ export class RNSync
     {
         return new Promise( ( resolve, reject ) =>
         {
-            callback = callback || noop;
+            const databaseUrl = cloudantServerUrl + '/' + datastoreName;
 
-            rnsyncModule.init( this.databaseUrl, this.databaseName, error =>
+            rnsyncModule.init( databaseUrl, datastoreName, error =>
             {
-                callback( error )
-
-                error == null ? resolve() : reject( error )
-            } )
+                callback( error );
+                if(error) reject(error);
+                else resolve(null)
+            } );
         } )
     }
 
-    create( body, id, callback )
+    create ( datastoreName, body, id, callback )
     {
         callback = callback || noop;
 
@@ -150,7 +154,7 @@ export class RNSync
 
         return new Promise( ( resolve, reject ) =>
         {
-            rnsyncModule.create( this.databaseName, body, id, ( error, doc ) =>
+            rnsyncModule.create( datastoreName, body, id, ( error, doc ) =>
             {
                 callback( error, doc );
                 error == null ? resolve( doc ) : reject( error )
@@ -158,13 +162,13 @@ export class RNSync
         } )
     }
 
-    retrieve( id, callback )
+    retrieve ( datastoreName, id, callback )
     {
         callback = callback || noop;
 
         return new Promise( ( resolve, reject ) =>
         {
-            rnsyncModule.retrieve( this.databaseName, id, ( error, doc ) =>
+            rnsyncModule.retrieve( datastoreName, id, ( error, doc ) =>
             {
                 callback( error, doc );
 
@@ -173,13 +177,30 @@ export class RNSync
         } )
     }
 
-    findOrCreate( id, callback )
+    // The callback success value is an object where the keys are the attachment names,
+    // and the values are the base64 encoded attachments
+    retrieveAttachments ( datastoreName, id, callback )
+    {
+        callback = callback || noop;
+
+        return new Promise( (resolve, reject) =>
+        {
+            rnsyncModule.retrieveAttachments( datastoreName, id, ( error, attachments ) =>
+            {
+                callback( error, attachments );
+                if(error) reject(error);
+                else resolve(attachments)
+            } );
+        })
+    }
+
+    findOrCreate ( datastoreName, id, callback )
     {
         callback = callback || noop;
 
         return new Promise( ( resolve, reject ) =>
         {
-            rnsyncModule.retrieve( this.databaseName, id, ( error, doc ) =>
+            rnsyncModule.retrieve( datastoreName, id,  ( error, doc ) =>
             {
                 if ( error === 404 )
                 {
@@ -200,7 +221,7 @@ export class RNSync
         } )
     }
 
-    update( id, rev, body, callback )
+    update ( datastoreName, id, rev, body, callback )
     {
         callback = callback || noop;
 
@@ -214,7 +235,7 @@ export class RNSync
 
         return new Promise( ( resolve, reject ) =>
         {
-            rnsyncModule.update( this.databaseName, id, rev, body, ( error, doc ) =>
+            rnsyncModule.update( datastoreName, id, rev, body, ( error, doc ) =>
             {
                 callback( error, doc );
 
@@ -223,7 +244,7 @@ export class RNSync
         } )
     }
 
-    delete( id, callback )
+    delete ( datastoreName, id, callback )
     {
         callback = callback || noop;
 
@@ -234,7 +255,7 @@ export class RNSync
 
         return new Promise( ( resolve, reject ) =>
         {
-            rnsyncModule.delete( this.databaseName, id, ( error ) =>
+            rnsyncModule.delete( datastoreName, id, ( error ) =>
             {
                 callback( error );
                 error == null ? resolve() : reject( error )
@@ -243,7 +264,7 @@ export class RNSync
 
     }
 
-    replicateSync( callback )
+    replicateSync ( datastoreName, callback )
     {
         callback = callback || noop;
 
@@ -259,13 +280,13 @@ export class RNSync
             } )
     }
 
-    replicatePush( callback )
+    replicatePush ( datastoreName, callback )
     {
         callback = callback || noop;
 
         return new Promise( ( resolve, reject ) =>
         {
-            rnsyncModule.replicatePush( this.databaseName, ( error ) =>
+            rnsyncModule.replicatePush( datastoreName, (error) =>
             {
                 callback( error );
 
@@ -274,24 +295,24 @@ export class RNSync
         } );
     }
 
-    replicatePull( callback )
+    replicatePull ( datastoreName, callback )
     {
         callback = callback || noop;
 
         return new Promise( ( resolve, reject ) =>
         {
-            rnsyncModule.replicatePull( this.databaseName, ( error ) =>
+            rnsyncModule.replicatePull( datastoreName, (error, msg) =>
             {
-                callback( error );
-
-                error == null ? resolve() : reject( error )
-            } )
-        } );
+                callback( error, msg );
+                if(error) reject(error);
+                else resolve(msg)
+            })
+        });
     }
 
     // For how to create a query: https://github.com/cloudant/CDTDatastore/blob/master/doc/query.md
-    // The 'fields' arugment is for projection.  Its an array of fields that you want returned when you do not want the entire doc
-    find( query, fields, callback )
+    // The 'fields' argument is for projection. It's an array of fields that you want returned when you do not want the entire doc
+    find ( datastoreName, query, fields, callback )
     {
         callback = callback || noop;
 
@@ -303,7 +324,7 @@ export class RNSync
 
         return new Promise( ( resolve, reject ) =>
         {
-            rnsyncModule.find( this.databaseName, query, fields, ( error, docs ) =>
+            rnsyncModule.find( datastoreName, query, fields, ( error, docs ) =>
             {
                 if ( !error && Platform.OS === "android" )
                 {
@@ -345,8 +366,40 @@ class RNSyncWrapper extends RNSync
             } )
         } )
     }
+
+    /*
+     * Indexes is of the form:
+     * {"TEXT":{"textNames":["Common_name","Botanical_name"]},"JSON":{"jsonNames":["Common_name","Botanical_name"]}}
+     */
+    createIndexes ( datastoreName, indexes, callback )
+    {
+        callback = callback || noop;
+
+        return new Promise( (resolve, reject) =>
+        {
+            rnsyncModule.createIndexes( datastoreName, indexes, ( error ) =>
+            {
+                callback( error );
+                if(error) reject(error);
+                else resolve()
+            } );
+        });
+    }
+
+    deleteStore ( datastoreName, callback )
+    {
+        callback = callback || noop;
+
+        return new Promise( (resolve, reject) =>
+        {
+            rnsyncModule.deleteStore( datastoreName, (error) =>
+            {
+                callback( error );
+                if(error) reject(error);
+                else resolve()
+            } );
+        });
+    }
 }
 
-export const rnsyncStorage = new RNSyncStorage();
 export default new RNSyncWrapper();
-

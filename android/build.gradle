@@ -15,8 +15,9 @@ android {
     defaultConfig {
         minSdkVersion 16
         targetSdkVersion 22
-        versionCode 1
-        versionName "1.0"
+
+        versionCode 2
+        versionName "2.0"
 
         ndk {
             abiFilters "armeabi-v7a", "x86"
@@ -37,13 +38,14 @@ allprojects {
 }
 
 repositories {
+    jcenter()
     mavenLocal()
     mavenCentral()
     google()
 }
 
 dependencies {
-    compile 'com.facebook.react:react-native:+'
-    compile group: 'com.cloudant', name: 'cloudant-sync-datastore-android', version:'2.+'
-    compile 'com.google.code.gson:gson:2.3.1'
+    implementation 'com.facebook.react:react-native:+'
+    implementation group: 'com.cloudant', name: 'cloudant-sync-datastore-android', version:'2.+'
+    implementation 'com.google.code.gson:gson:2.3.1'
 }
