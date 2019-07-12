@@ -23,6 +23,7 @@
     RCTResponseSenderBlock replicatorDidCompleteCallback;
     RCTResponseSenderBlock replicatorDidErrorCallback;
     NSMutableDictionary *replicationManagers;
+    NSString *databaseUrl;
 }
 
 //@synthesize bridge = _bridge;
@@ -123,7 +124,7 @@ RCT_EXPORT_METHOD(replicatePull:(NSString*) databaseName callback:(RCTResponseSe
 //RCT_EXPORT_METHOD(create: body id:(NSString*)id databaseName:(NSString*) databaseName callback:(RCTResponseSenderBlock)callback)
 RCT_EXPORT_METHOD(create: (NSString*) databaseName body: body id:(NSString*)id  callback:(RCTResponseSenderBlock)callback)
 {
-    RNSyncDataStore *rnsyncStore = datastores[storeName];
+    RNSyncDataStore *rnsyncStore = datastores[databaseName];
 
     NSError *error = nil;
 
@@ -167,11 +168,11 @@ RCT_EXPORT_METHOD(create: (NSString*) databaseName body: body id:(NSString*)id  
 
 RCT_EXPORT_METHOD(addAttachment: (NSString*) databaseName name: id name:(NSString*)name path:(NSString*)path type:(NSString*)type callback:(RCTResponseSenderBlock)callback)
 {
-    RNSyncDataStore *rnsyncStore = datastores[storeName];
+    RNSyncDataStore *rnsyncStore = datastores[databaseName];
 
     NSError *error = nil;
 
-    if(!id || !databaseName || !datastores[databaseName]) {
+    if(!id || !databaseName || !rnsyncStore) {
         callback(@[[NSString stringWithFormat:@"Parameter error, id: %@, database: %@", id, databaseName]]);
         return;
     }
@@ -208,7 +209,7 @@ RCT_EXPORT_METHOD(addAttachment: (NSString*) databaseName name: id name:(NSStrin
 
 RCT_EXPORT_METHOD(retrieve: (NSString*) databaseName id: (NSString *)id  callback:(RCTResponseSenderBlock)callback)
 {
-    RNSyncDataStore *rnsyncStore = datastores[storeName];
+    RNSyncDataStore *rnsyncStore = datastores[databaseName];
 
     NSError *error = nil;
 
@@ -234,7 +235,7 @@ RCT_EXPORT_METHOD(retrieve: (NSString*) databaseName id: (NSString *)id  callbac
 
 RCT_EXPORT_METHOD(retrieveAttachments: (NSString*) databaseName id: (NSString *)id callback:(RCTResponseSenderBlock)callback)
 {
-    RNSyncDataStore *rnsyncStore = datastores[storeName];
+    RNSyncDataStore *rnsyncStore = datastores[databaseName];
 
     NSError *error = nil;
 
@@ -267,6 +268,10 @@ RCT_EXPORT_METHOD(retrieveAttachments: (NSString*) databaseName id: (NSString *)
 RCT_EXPORT_METHOD(update: (NSString*) databaseName id: (NSString *)id rev:(NSString *)rev body:(NSDictionary *)body callback:(RCTResponseSenderBlock)callback)
 {
     NSError *error = nil;
+//    NSLog(@"AAA0");
+//    NSLog(@"id: %@", id);
+//    NSLog(@"rev: %@", rev);
+//    NSLog(@"body: %@", body);
 
     if(!id || !databaseName || !datastores[databaseName]) {
         callback(@[[NSString stringWithFormat:@"Parameter error, id: %@, database: %@", id, databaseName]]);
@@ -274,12 +279,20 @@ RCT_EXPORT_METHOD(update: (NSString*) databaseName id: (NSString *)id rev:(NSStr
     }
 
     // Read a document
-    CDTDocumentRevision *retrieved = [datastores[databaseName] getDocumentWithId:id rev:rev error:&error];
+    CDTDocumentRevision *retrieved = [datastores[databaseName] getDocumentWithId:id rev:rev error:&error];//    NSLog(@"AAA1");
+//    NSLog(@"%@", retrieved);
+//    NSLog(@"%@", retrieved.revId);
+//    NSLog(@"%@", retrieved.body);
 
     retrieved.body = (NSMutableDictionary*)body;
+//    retrieved.revId = (NSString*)rev;
 
     CDTDocumentRevision *updated = [datastores[databaseName] updateDocumentFromRevision:retrieved
-                                                                                  error:&error];
+                                                                                error:&error];
+//    NSLog(@"AAA2");
+//    NSLog(@"%@", updated);
+//    NSLog(@"%@", updated.revId);
+//    NSLog(@"%@", updated.body);
 
     NSDictionary *dict = @{ @"id" : updated.docId, @"rev" : updated.revId, @"body" : updated.body };
 
@@ -297,7 +310,7 @@ RCT_EXPORT_METHOD(update: (NSString*) databaseName id: (NSString *)id rev:(NSStr
 RCT_EXPORT_METHOD(delete:(NSString*) databaseName id: (NSString *)id callback:(RCTResponseSenderBlock)callback)
 {
 
-    RNSyncDataStore *rnsyncStore = datastores[storeName];
+    RNSyncDataStore *rnsyncStore = datastores[databaseName];
 
     NSError *error = nil;
 
@@ -338,7 +351,7 @@ RCT_EXPORT_METHOD(deleteStore:(NSString*) databaseName callback:(RCTResponseSend
     {
         if(deleted)
         {
-            [datastores removeObjectForKey:storeName];
+            [datastores removeObjectForKey:databaseName];
         }
 
         //NSArray *params = @[[NSNumber numberWithBool:deleted]];
