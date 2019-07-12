@@ -204,7 +204,7 @@ export class RNSync
             {
                 if ( error === 404 )
                 {
-                    this.create( null, id, ( error, doc ) =>
+                    this.create( datastoreName, id, ( error, doc ) =>
                     {
                         callback( error, doc );
 
