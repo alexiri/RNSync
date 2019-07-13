@@ -1,3 +1,5 @@
 rootProject.name = 'example'
+include ':rnsync'
+project(':rnsync').projectDir = new File(rootProject.projectDir, '../node_modules/rnsync/android')
 
 include ':app'
