@@ -1,0 +1,4 @@
+export const Config = {
+  COUCHDB_URL: 'https://couchdb.example.com',
+  COUCHDB_DB: 'mydb'
+};

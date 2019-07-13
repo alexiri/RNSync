@@ -91,20 +91,6 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
     public void init(String databaseUrl, String datastoreName, Callback callback) {
         String datastoreDir = "datastores";
 
-        try {
-            uri = new URI(databaseUrl);
-        }
-        catch (Exception e)
-        {
-            callback.invoke(e.getMessage());
-            return;
-        }
-
-        if(documentStores == null)
-        {
-            documentStores = new HashMap<String, DocumentStore>();
-        }
-
         try{
             File path = super.getReactApplicationContext()
                     .getApplicationContext()

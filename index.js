@@ -107,8 +107,8 @@ export class RNSync
 {
     init ( cloudantServerUrl, datastoreName, callback )
     {
-        this.databaseUrl = cloudantServerUrl + '/' + databaseName
-        this.databaseName = databaseName
+        this.databaseUrl = cloudantServerUrl + '/' + datastoreName
+        this.databaseName = datastoreName
     }
 
     init( callback )
