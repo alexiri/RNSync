@@ -1,4 +1,4 @@
-package com.example;
+package com.example.rnsync;
 
 import android.app.Application;
 

@@ -6,7 +6,7 @@ RNSync.init(Config.COUCHDB_URL, Config.COUCHDB_DB)
   .then(result => {
     console.log("RNSync init:", result);
   })
-  .catch(error => console.warn("rnsync init error", error));
+  .catch(error => console.warn("RNSync init error", error));
 
 
 
