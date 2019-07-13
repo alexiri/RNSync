@@ -180,13 +180,13 @@ All of the CRUD functions only affect the local database.  To push your changes 
 Push your local changes to the remote database
 
 ```javascript
-rnsync.replicatePush(dbName,  error => console.log(error) );
+rnsync.replicatePush(dbName,  (error, msg, docs, batches) => console.log(error) );
 ```
 
 Pull changes from the remote database to your local
 
 ```javascript
-rnsync.replicatePull(dbName,  error => console.log(error) );
+rnsync.replicatePull(dbName,  (error, msg, docs, batches) => console.log(error) );
 ```
 
 Do both a push and a pull
@@ -194,6 +194,7 @@ Do both a push and a pull
 ```javascript
 rnsync.replicateSync(dbName,  error => console.log(error) );
 ```
+Note: Not currently implemented.
 
 #### Find
 

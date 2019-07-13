@@ -7,7 +7,7 @@
     "copy:changes": "node ./scripts/watch_rnsync.js",
     "pack:rnsync": "./scripts/npm_pack_rnsync.sh",
     "clean:node:modules": "./scripts/clean_node_modules.sh",
-    "preinstall": "npm run pack:rnsync",
+    "preinstall": "npm run pack:rnsync && yarn upgrade rnsync",
     "test": "jest"
   },
   "dependencies": {

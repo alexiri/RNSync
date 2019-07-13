@@ -141,7 +141,7 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
                 callback.invoke(listener.error.getMessage());
             } else {
                 callback.invoke(null, String.format("Replicated %d documents in %d batches",
-                        listener.documentsReplicated, listener.batchesReplicated));
+                        listener.documentsReplicated, listener.batchesReplicated), listener.documentsReplicated, listener.batchesReplicated);
             }
         } catch (Exception e) {
             callback.invoke(e.getMessage());
@@ -181,7 +181,7 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
                 callback.invoke(listener.error.getMessage());
             } else {
                 callback.invoke(null, String.format("Replicated %d documents in %d batches",
-                        listener.documentsReplicated, listener.batchesReplicated));
+                        listener.documentsReplicated, listener.batchesReplicated), listener.documentsReplicated, listener.batchesReplicated);
             }
 
         } catch (Exception e) {
