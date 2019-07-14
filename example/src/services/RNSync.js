@@ -40,16 +40,24 @@ this.docDeleted = DeviceEventEmitter.addListener('rnsyncDatabaseDeleted', (e) =>
   console.log("store deleted", e);
 });
 
+this.docDeleted = DeviceEventEmitter.addListener('rnsyncReplicationCompleted', (e) => {
+  console.log(new Date(), "replication completed", e);
+  console.log(new Date(), "starting another one");
+  RNSync.replicatePull(Config.COUCHDB_DB, 10);
+});
+this.docDeleted = DeviceEventEmitter.addListener('rnsyncReplicationFailed', (e) => {
+  console.log("replication failed", e);
+});
+
 RNSync.init(Config.COUCHDB_URL, Config.COUCHDB_DB)
   .then(result => {
     console.log("RNSync init successfully!");
   })
   .then(() => countDocs())
   .then(() => {
-    console.log("RNSync going to replicate");
+    console.log(new Date(), "RNSync going to replicate");
 
-    RNSync.replicatePull(Config.COUCHDB_DB)
-    .then(() => countDocs());
+    RNSync.replicatePull(Config.COUCHDB_DB, 1);
   })
   .catch(error => console.warn("RNSync init error", error));
 

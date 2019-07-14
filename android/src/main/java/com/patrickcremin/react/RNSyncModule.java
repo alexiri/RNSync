@@ -19,6 +19,7 @@ import com.cloudant.sync.query.QueryResult;
 import com.cloudant.sync.query.Tokenizer;
 import com.cloudant.sync.replication.Replicator;
 import com.cloudant.sync.replication.ReplicatorBuilder;
+
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
@@ -52,10 +53,18 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import android.os.PersistableBundle;
+import android.content.ComponentName;
+import android.content.Context;
+import android.app.job.JobScheduler;
+import android.app.job.JobInfo;
+import android.app.job.JobInfo.Builder;
+
 class Store {
     URI replicationUri;
     DocumentStore documentStore;
     DocumentEventHandler docListener;
+    ReplicationEventHandler replListener;
 
     Store(URI replicationUri, DocumentStore documentStore) {
         this.replicationUri = replicationUri;
@@ -134,6 +143,9 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
         if (store.docListener != null) {
             store.documentStore.database().getEventBus().unregister(store.docListener);
         }
+        if (store.replListener != null) {
+            RNSyncJobService.getEventBus().unregister(store.replListener);
+        }
         stores.remove(datastoreName);
 
         if (stores.size() == 0) {
@@ -173,84 +185,56 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void replicatePush(String datastoreName, Callback callback) {
-        Store store = stores.get(datastoreName);
-        if (store == null) {
-            callback.invoke("No datastore named " + datastoreName);
-            return;
-        }
-        DocumentStore ds = store.documentStore;
-
-        // Replicate from the local to remote database
-        Replicator replicator = ReplicatorBuilder.push()
-                .from(ds)
-                .to(store.replicationUri)
-                .build();
-
-        CountDownLatch latch = new CountDownLatch(1);
-
-        Listener listener = new Listener(latch);
-
-        replicator.getEventBus().register(listener);
-
-        // Fire-and-forget (there are easy ways to monitor the state too)
-        replicator.start();
-
-        try {
-            latch.await();
-
-            if (replicator.getState() != Replicator.State.COMPLETE) {
-                callback.invoke(listener.error.getMessage());
-            } else {
-                callback.invoke(null, String.format("Replicated %d documents in %d batches",
-                        listener.documentsReplicated, listener.batchesReplicated), listener.documentsReplicated, listener.batchesReplicated);
-            }
-        } catch (Exception e) {
-            callback.invoke(e.getMessage());
-        } finally {
-            replicator.getEventBus().unregister(listener);
-        }
+    public void replicatePush(String datastoreName, int delaySeconds, Callback callback) {
+        replicate(datastoreName, delaySeconds, false, true, callback);
     }
 
     @ReactMethod
-    public void replicatePull(String datastoreName, Callback callback) {
+    public void replicatePull(String datastoreName, int delaySeconds, Callback callback) {
+        replicate(datastoreName, delaySeconds, true, false, callback);
+    }
+
+    @ReactMethod
+    public void replicateSync(String datastoreName, int delaySeconds, Callback callback) {
+        replicate(datastoreName, delaySeconds, true, true, callback);
+    }
+
+    private void replicate(String datastoreName, int minSeconds, Boolean pull, Boolean push, Callback callback) {
         Store store = stores.get(datastoreName);
         if (store == null) {
             callback.invoke("No datastore named " + datastoreName);
             return;
         }
-        DocumentStore ds = store.documentStore;
 
-        // Replicate from the local to remote database
-        Replicator replicator = ReplicatorBuilder.pull()
-                .from(store.replicationUri)
-                .to(ds)
-                .build();
+        File path = super.getReactApplicationContext()
+                    .getApplicationContext()
+                    .getDir(datastoreDir, Context.MODE_PRIVATE);
 
-        CountDownLatch latch = new CountDownLatch(1);
+        PersistableBundle bundle = new PersistableBundle();
+        bundle.putString("datastoreName", datastoreName);
+        bundle.putString("datastoreDir", path.getAbsolutePath());
+        bundle.putString("replicationUri", store.replicationUri.toString());
+        bundle.putBoolean("DIR_PULL", pull);
+        bundle.putBoolean("DIR_PUSH", push);
+        int MY_JOB_ID = 1;
 
-        Listener listener = new Listener(latch);
-
-        replicator.getEventBus().register(listener);
-
-        replicator.start();
-
-        try {
-            latch.await();
-            replicator.getEventBus().unregister(listener);
-
-            if (replicator.getState() != Replicator.State.COMPLETE) {
-                callback.invoke(listener.error.getMessage());
-            } else {
-                callback.invoke(null, String.format("Replicated %d documents in %d batches",
-                        listener.documentsReplicated, listener.batchesReplicated), listener.documentsReplicated, listener.batchesReplicated);
-            }
-
-        } catch (Exception e) {
-            callback.invoke(e.getMessage());
-        } finally {
-            replicator.getEventBus().unregister(listener);
+        if (store.replListener == null) {
+            store.replListener = new ReplicationEventHandler(super.getReactApplicationContext(), datastoreName);
+            RNSyncJobService.getEventBus().register(store.replListener);
         }
+
+        Context context = super.getReactApplicationContext().getApplicationContext();
+        ComponentName jobServiceComponent = new ComponentName(context, RNSyncJobService.class);
+
+        JobInfo.Builder builder = new JobInfo.Builder(MY_JOB_ID, jobServiceComponent);
+        builder.setMinimumLatency(minSeconds * 1000);
+        builder.setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY);
+        builder.setExtras(bundle);
+
+        JobScheduler jobScheduler = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+        jobScheduler.schedule(builder.build());
+
+        callback.invoke();
     }
 
     @ReactMethod

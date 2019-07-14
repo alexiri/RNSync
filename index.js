@@ -277,48 +277,44 @@ export class RNSync
 
     }
 
-    replicateSync ( datastoreName, callback )
-    {
-        callback = callback || noop;
-
-        var pushPromise = this.replicatePush();
-        var pullPromise = this.replicatePull();
-
-        return Promise.all( [ pushPromise, pullPromise ] )
-            .then( callback )
-            .catch( e =>
-            {
-                callback( e );
-                throw(e);
-            } )
-    }
-
-    replicatePush ( datastoreName, callback )
+    replicateSync ( datastoreName, delaySeconds, callback )
     {
         callback = callback || noop;
 
         return new Promise( ( resolve, reject ) =>
         {
-            rnsyncModule.replicatePush( datastoreName, (error) =>
+            rnsyncModule.replicateSync( datastoreName, delaySeconds, (error) =>
             {
-                callback( error );
-
-                error == null ? resolve() : reject( error )
-            } )
-        } );
-    }
-
-    replicatePull ( datastoreName, callback )
-    {
-        callback = callback || noop;
-
-        return new Promise( ( resolve, reject ) =>
-        {
-            rnsyncModule.replicatePull( datastoreName, (error, msg) =>
-            {
-                callback( error, msg );
                 if(error) reject(error);
-                else resolve(msg)
+                else resolve();
+            })
+        });
+    }
+
+    replicatePush ( datastoreName, delaySeconds, callback )
+    {
+        callback = callback || noop;
+
+        return new Promise( ( resolve, reject ) =>
+        {
+            rnsyncModule.replicatePush( datastoreName, delaySeconds, (error) =>
+            {
+                if(error) reject(error);
+                else resolve();
+            })
+        });
+    }
+
+    replicatePull ( datastoreName, delaySeconds, callback )
+    {
+        callback = callback || noop;
+
+        return new Promise( ( resolve, reject ) =>
+        {
+            rnsyncModule.replicatePull( datastoreName, delaySeconds, (error) =>
+            {
+                if(error) reject(error);
+                else resolve();
             })
         });
     }
