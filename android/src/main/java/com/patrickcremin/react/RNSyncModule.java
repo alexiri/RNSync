@@ -55,6 +55,7 @@ import java.util.concurrent.TimeUnit;
 class Store {
     URI replicationUri;
     DocumentStore documentStore;
+    DocumentEventHandler docListener;
 
     Store(URI replicationUri, DocumentStore documentStore) {
         this.replicationUri = replicationUri;
@@ -63,9 +64,11 @@ class Store {
 }
 
 public class RNSyncModule extends ReactContextBaseJavaModule {
+    public static final String TAG = "RNSyncModule";
 
     private static final int MAX_THREADS = 5;
     private static ThreadPoolExecutor executor;
+    private static final String datastoreDir = "datastores";
 
     static {
         executor = new ThreadPoolExecutor(
@@ -76,6 +79,7 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
     }
 
     private HashMap<String, Store> stores = new HashMap<>();
+    private DatabaseEventHandler dbListener;
 
     RNSyncModule(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -89,16 +93,24 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
     // TODO let them name the datastore
     @ReactMethod
     public void init(String databaseUrl, String datastoreName, Callback callback) {
-        String datastoreDir = "datastores";
+        File path = super.getReactApplicationContext()
+                .getApplicationContext()
+                .getDir(datastoreDir, Context.MODE_PRIVATE);
 
+        if (stores.size() == 0) {
+            dbListener = new DatabaseEventHandler(super.getReactApplicationContext(), path.getAbsolutePath());
+            DocumentStore.getEventBus().register(dbListener);
+            Log.i(TAG, "Registered DB listener");
+        }
         try{
-            File path = super.getReactApplicationContext()
-                    .getApplicationContext()
-                    .getDir(datastoreDir, Context.MODE_PRIVATE);
             DocumentStore ds = DocumentStore.getInstance(new File(path, datastoreName));
             URI uri = new URI(databaseUrl);
 
-            stores.put(datastoreName, new Store(uri, ds));
+            Store store = new Store(uri, ds);
+            store.docListener = new DocumentEventHandler(super.getReactApplicationContext(), datastoreName);
+            ds.database().getEventBus().register(store.docListener);
+
+            stores.put(datastoreName, store);
         } catch (DocumentStoreNotOpenedException e) {
             callback.invoke(e.getMessage());
             return;
@@ -108,6 +120,29 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
         }
 
         callback.invoke();
+    }
+
+    @ReactMethod
+    public void close(String datastoreName, Callback callError) {
+        Store store = stores.get(datastoreName);
+        if (store == null) {
+            callError.invoke("No datastore named " + datastoreName);
+            return;
+        }
+
+        store.documentStore.close();
+        if (store.docListener != null) {
+            store.documentStore.database().getEventBus().unregister(store.docListener);
+        }
+        stores.remove(datastoreName);
+
+        if (stores.size() == 0) {
+            DocumentStore.getEventBus().unregister(dbListener);
+            dbListener = null;
+            Log.i(TAG, "Unregistered DB listener");
+        }
+
+        callError.invoke();
     }
 
     @ReactMethod
@@ -406,7 +441,7 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
         }
     }
 
-    private HashMap<String, Object> createDoc(DocumentRevision revision) {
+    public static HashMap<String, Object> createDoc(DocumentRevision revision) {
         HashMap<String, Object> doc = new HashMap<>();
         doc.put("id", revision.getId());
         doc.put("rev", revision.getRevision());
@@ -435,7 +470,7 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
      */
     @ReactMethod
     public void createIndexes(final String datastoreName, final ReadableMap indexes, final Callback callback) {
-        Log.i("RNSyncModule", "createIndexes: " + indexes.toString());
+        Log.i(TAG, "createIndexes: " + indexes.toString());
 
         Store store = stores.get(datastoreName);
         if (store == null) {
@@ -562,13 +597,13 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
         return map;
     }
 
-    private static WritableMap createWritableMapFromHashMap(HashMap<String, Object> doc) {
+    public static WritableMap createWritableMapFromHashMap(HashMap<String, Object> doc) {
         try {
             JSONObject jsonObject = new JSONObject(new Gson().toJson(doc));
 
             return convertJsonToMap(jsonObject);
         } catch (JSONException e) {
-            Log.e("RNSyncModule", "Failed to create WriteableMap from document");
+            Log.e(TAG, "Failed to create WriteableMap from document");
 
             throw new RuntimeException(e);
         }
