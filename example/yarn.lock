@@ -5216,7 +5216,7 @@ rimraf@~2.2.6:
 
 "rnsync@file:../rnsync-5.0.0.tgz":
   version "5.0.0"
-  resolved "file:../rnsync-5.0.0.tgz#802137a27c7d3bda20f3d1a9fca698f6211cf29e"
+  resolved "file:../rnsync-5.0.0.tgz#8366ff6b5d83ccedb5d3d293ebbb2eaeb03ecb2f"
 
 rsvp@^3.3.3:
   version "3.6.2"

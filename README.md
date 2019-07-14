@@ -223,6 +223,28 @@ rnsync.createIndexes(dbName, indexes, function(error)
 });
 ```
 
+### Events
+
+The following events are emitted by this module:
+ * `rnsyncDatabaseOpened`
+ * `rnsyncDatabaseClosed`
+ * `rnsyncDatabaseCreated`
+ * `rnsyncDatabaseDeleted`
+ * `rnsyncDocumentCreated`
+ * `rnsyncDocumentUpdated`
+ * `rnsyncDocumentDeleted`
+
+These events may be handled as follows:
+
+```javascript
+import { DeviceEventEmitter } from 'react-native';
+
+this.docCreated = DeviceEventEmitter.addListener('rnsyncDocumentCreated', (e) => {
+  console.log("doc created", e);
+});
+```
+
+
 ## Usage with redux-persist
 
 ```javascript
