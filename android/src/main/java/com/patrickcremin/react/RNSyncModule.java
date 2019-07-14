@@ -146,6 +146,33 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
+    public void readAll(String datastoreName, Callback callback) {
+        Store store = stores.get(datastoreName);
+        if (store == null) {
+            callback.invoke("No datastore named " + datastoreName);
+            return;
+        }
+        DocumentStore ds = store.documentStore;
+
+        try {
+            List<DocumentRevision> documentRevisions = ds.database().read(0, ds.database().getDocumentCount(), true);
+
+            WritableArray docs = new WritableNativeArray();
+
+            for (DocumentRevision revision : documentRevisions) {
+
+                String jsonString = new Gson().toJson(this.createDoc(revision));
+
+                docs.pushString(jsonString);
+            }
+
+            callback.invoke(null, docs);
+        } catch (Exception e) {
+            callback.invoke(e.getMessage());
+        }
+    }
+
+    @ReactMethod
     public void replicatePush(String datastoreName, Callback callback) {
         Store store = stores.get(datastoreName);
         if (store == null) {

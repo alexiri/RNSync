@@ -80,6 +80,18 @@ rnsync.deleteStore(dbName, function(error)
 });
 ```
 
+#### Read all documents
+
+```javascript
+rnsync.readAll(dbName, (error, docs) => {
+  if (error) {
+    console.warn(error);
+  } else {
+    console.log(docs);
+  }
+})
+```
+
 #### Create
 
 Both the object and the id are optional.  If you leave out the object it will create a new doc that is empty.  If you leave

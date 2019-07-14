@@ -4,16 +4,12 @@ import { Config } from "./config";
 
 function countDocs() {
   return new Promise( ( resolve, reject ) =>
-    RNSync.find(
-      Config.COUCHDB_DB,
-      { _id: { $exists: true } },
-      [],
-      (error, docs) => {
+    RNSync.readAll(Config.COUCHDB_DB, (error, docs) => {
         if (error) {
-          console.warn("RNSync find error:", error);
+          console.warn("RNSync readAll error:", error);
           reject(error);
         } else {
-          console.log(`RNSync found ${docs.length} docs`);
+          console.log(`RNSync read ${docs.length} docs`);
           resolve(docs.length);
         }
       })

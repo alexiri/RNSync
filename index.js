@@ -323,6 +323,27 @@ export class RNSync
         });
     }
 
+    readAll ( datastoreName, callback )
+    {
+        callback = callback || noop;
+
+        return new Promise( ( resolve, reject ) =>
+        {
+            rnsyncModule.readAll( datastoreName, ( error, docs ) =>
+            {
+                if ( !error && Platform.OS === "android" )
+                {
+                    docs = docs.map( doc => JSON.parse( doc ) )
+                }
+
+                callback( error, docs );
+
+                error == null ? resolve( docs ) : reject( error )
+            } );
+
+        } );
+    }
+
     // For how to create a query: https://github.com/cloudant/CDTDatastore/blob/master/doc/query.md
     // The 'fields' argument is for projection. It's an array of fields that you want returned when you do not want the entire doc
     find ( datastoreName, query, fields, callback )
