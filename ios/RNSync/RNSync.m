@@ -12,6 +12,7 @@
 #import "ReplicationManager.h"
 #import "CloudantSync.h"
 #import "RNSyncDataStore.h"
+#import "EventEmitter.h"
 
 @implementation RNSync
 {
@@ -23,8 +24,48 @@
     RCTResponseSenderBlock replicatorDidCompleteCallback;
     RCTResponseSenderBlock replicatorDidErrorCallback;
     NSMutableDictionary *replicationManagers;
+    NSMutableDictionary *notificationManagers;
     NSString *databaseUrl;
 }
+
+@interface EventWatcher : NSObject
+
+@end
+
+@implementation EventWatcher
+
+/** Stuff to read
+  https://github.com/cloudant/CDTDatastore/blob/master/doc/events.md
+  https://github.com/cloudant/CDTDatastore/blob/master/CDTDatastoreTests/Events/CDTDatastoreEvents.m
+  https://facebook.github.io/react-native/docs/native-modules-ios#sending-events-to-javascript
+*/
+
+/**
+ Notified that a document has been created/updated/deleted.
+
+ This method acts on changes to documents with the ID `self.documentToWatch`.
+ */
+- (void) dbChanged: (NSNotification*)n {
+    CDTDocumentRevision* rev = (n.userInfo)[@"rev"];
+
+    NSLog(@"id: %@", rev.docId);
+    NSLog(@"rev: %@", rev.revId);
+    NSLog(@"body: %@", rev.body);
+
+    NSString* docID = rev.docId;
+
+    if (rev.deleted) {
+        // do something
+    }
+
+    NSDictionary *body = [rev documentAsDictionary];
+
+    // Process the current document's content using the
+    // body dictionary...
+    // [EventEmitter documentCreated] something or other
+}
+
+@end
 
 //@synthesize bridge = _bridge;
 
@@ -95,6 +136,16 @@ RCT_EXPORT_METHOD(init: (NSString *)databaseUrl databaseName:(NSString*) databas
     ReplicationManager* replicationManager = [[ReplicationManager alloc] initWithData:remoteDatabaseURL datastore:datastores[databaseName] replicatorFactory:replicatorFactory];
 
     replicationManagers[databaseName] = replicationManager;
+
+    if (!notificationManagers) {
+        notificationManagers = [NSMutableDictionary new];
+    }
+    EventWatcher* watcher = [[EventWatcher alloc] init];
+    [[NSNotificationCenter defaultCenter] addObserver:watcher
+                                             selector:@selector(dbChanged:)
+                                                 name:CDTDatastoreChangeNotification
+                                               object:datastores[databaseName]];
+    notificationManagers[databaseName] = watcher;
 
     callback(@[[NSNull null]]);
 }
