@@ -45,7 +45,12 @@ public class DocumentEventHandler {
     public void onDocumentUpdated(DocumentUpdated dc) {
         DocumentRevision doc = dc.newDocument;
         Log.d(TAG, String.format("onDocumentUpdated: %s", doc.getId()));
-        sendEvent("rnsyncDocumentUpdated", doc);
+        if (doc.isDeleted()) {
+            // We may get a onDocumentUpdated event even though the "update" was to delete the doc
+            sendEvent("rnsyncDocumentDeleted", doc);
+        } else {
+            sendEvent("rnsyncDocumentUpdated", doc);
+        }
     }
 
     @Subscribe
