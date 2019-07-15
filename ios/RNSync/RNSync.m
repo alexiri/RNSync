@@ -99,6 +99,34 @@ RCT_EXPORT_METHOD(init: (NSString *)databaseUrl databaseName:(NSString*) databas
     callback(@[[NSNull null]]);
 }
 
+// TODO all the documents could be huge (run out of memory huge).  Need param for how many items
+// to return and paging to get the rest
+RCT_EXPORT_METHOD(readAll:(NSString*) databaseName callback:(RCTResponseSenderBlock)callback)
+{
+
+    if(!databaseName || !datastores[databaseName]) {
+        callback(@[[NSString stringWithFormat:@"Parameter error, database: %@", databaseName]]);
+        return;
+    }
+
+    // TODO waste to new up resultList for every call
+    NSMutableArray* resultList = [[NSMutableArray alloc] init];
+
+    CDTQResultSet *result = [datastores[databaseName] getAllDocuments];
+
+    [result enumerateObjectsUsingBlock:^(CDTDocumentRevision *rev, NSUInteger idx, BOOL *stop)
+     {
+         if([rev.docId hasPrefix:@"_"]) continue; // We're not interested in documents that start with an underscore
+
+         NSDictionary *dict = @{ @"id" : rev.docId, @"rev" : rev.revId, @"body" : rev.body };
+
+         [resultList addObject: dict];
+     }];
+
+    //NSArray *params = @[resultList];
+    callback(@[[NSNull null], resultList]);
+}
+
 RCT_EXPORT_METHOD(replicatePush:(NSString*) databaseName callback:(RCTResponseSenderBlock)callback)
 {
     ReplicationManager* replicationManager = replicationManagers[databaseName];
