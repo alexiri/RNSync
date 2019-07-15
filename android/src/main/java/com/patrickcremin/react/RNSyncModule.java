@@ -172,6 +172,7 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
             WritableArray docs = new WritableNativeArray();
 
             for (DocumentRevision revision : documentRevisions) {
+                if (revision.getId().startsWith("_")) continue; // We're not interested in documents that start with an underscore
 
                 String jsonString = new Gson().toJson(this.createDoc(revision));
 

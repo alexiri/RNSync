@@ -26,6 +26,7 @@ public class DocumentEventHandler {
     }
 
     private void sendEvent(String eventName, DocumentRevision doc) {
+        if (doc.getId().startsWith("_")) return; // We're not interested in documents that start with an underscore
         WritableMap params = RNSyncModule.createWritableMapFromHashMap(RNSyncModule.createDoc(doc));
         params.putString("datastoreName", datastoreName);
         reactContext
