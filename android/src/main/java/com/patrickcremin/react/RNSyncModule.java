@@ -158,6 +158,24 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
+    public void compact(String datastoreName, Callback callback) {
+        Store store = stores.get(datastoreName);
+        if (store == null) {
+            callback.invoke("No datastore named " + datastoreName);
+            return;
+        }
+
+        try {
+            store.documentStore.database().compact();
+        } catch (DocumentStoreException e) {
+            callback.invoke(e.getMessage());
+            return;
+        }
+
+        callback.invoke();
+    }
+
+    @ReactMethod
     public void readAll(String datastoreName, Callback callback) {
         Store store = stores.get(datastoreName);
         if (store == null) {

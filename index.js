@@ -139,6 +139,19 @@ export class RNSync
         } )
     }
 
+    compact( datastoreName, callback )
+    {
+        return new Promise( ( resolve, reject ) =>
+        {
+            rnsyncModule.compact(datastoreName, error =>
+            {
+                if (callback) callback( error );
+                if(error) reject(error);
+                else resolve(null)
+            } );
+        } )
+    }
+
     create ( datastoreName, body, id, callback )
     {
         callback = callback || noop;

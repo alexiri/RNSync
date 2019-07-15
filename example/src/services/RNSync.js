@@ -52,6 +52,9 @@ this.docDeleted = DeviceEventEmitter.addListener('rnsyncReplicationFailed', (e) 
 RNSync.init(Config.COUCHDB_URL, Config.COUCHDB_DB)
   .then(result => {
     console.log("RNSync init successfully!");
+    RNSync.compact(Config.COUCHDB_DB)
+      .then(() => console.log("Compaction executed"))
+      .catch(error => console.warn("Compaction error", error));
   })
   .then(() => countDocs())
   .then(() => {

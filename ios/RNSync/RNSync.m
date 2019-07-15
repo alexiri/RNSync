@@ -150,6 +150,25 @@ RCT_EXPORT_METHOD(init: (NSString *)databaseUrl databaseName:(NSString*) databas
     callback(@[[NSNull null]]);
 }
 
+RCT_EXPORT_METHOD(compact:(NSString*) databaseName callback:(RCTResponseSenderBlock)callback)
+{
+    if(!databaseName || !datastores[databaseName]) {
+        callback(@[[NSString stringWithFormat:@"Parameter error, database: %@", databaseName]]);
+        return;
+    }
+
+    NSError *error = nil;
+    [datastores[databaseName] compactWithError:&error];
+
+    if(!error)
+    {
+        callback(@[[NSNull null]]);
+    }
+    else{
+        callback(@[[NSNumber numberWithLong:error.code]]);
+    }
+}
+
 // TODO all the documents could be huge (run out of memory huge).  Need param for how many items
 // to return and paging to get the rest
 RCT_EXPORT_METHOD(readAll:(NSString*) databaseName callback:(RCTResponseSenderBlock)callback)

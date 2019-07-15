@@ -71,6 +71,15 @@ rnsync.init(dbUrl, dbName, function(error)
 });
 ```
 
+#### Compact Store
+
+This compacts the SQL database and disk storage by removing the bodies and attachments of obsolete revisions.
+
+```javascript
+rnsync.compact(dbName)
+  .catch(error => console.warn("Compaction error", error));
+```
+
 #### Delete Store
 
 ```javascript
