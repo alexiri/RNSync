@@ -1,6 +1,7 @@
 import RNSync, { RNSyncStorage } from "rnsync";
-import { DeviceEventEmitter } from 'react-native';
+import { NativeEventEmitter, NativeModules } from 'react-native';
 import { Config } from "./config";
+
 
 function countDocs() {
   return new Promise( ( resolve, reject ) =>
@@ -17,39 +18,41 @@ function countDocs() {
 }
 console.log("RNSync starting:", Config.COUCHDB_URL, Config.COUCHDB_DB);
 
-this.docCreated = DeviceEventEmitter.addListener('rnsyncDocumentCreated', (e) => {
+const eventEmitter = new NativeEventEmitter(NativeModules.RNSync);
+
+this.docCreated = eventEmitter.addListener('rnsyncDocumentCreated', (e) => {
   console.log("doc created", e);
 });
-this.docUpdated = DeviceEventEmitter.addListener('rnsyncDocumentUpdated', (e) => {
+this.docUpdated = eventEmitter.addListener('rnsyncDocumentUpdated', (e) => {
   console.log("doc updated", e);
 });
-this.docDeleted = DeviceEventEmitter.addListener('rnsyncDocumentDeleted', (e) => {
+this.docDeleted = eventEmitter.addListener('rnsyncDocumentDeleted', (e) => {
   console.log("doc deleted", e);
 });
 
-this.docCreated = DeviceEventEmitter.addListener('rnsyncDatabaseOpened', (e) => {
+this.docCreated = eventEmitter.addListener('rnsyncDatabaseOpened', (e) => {
   console.log("store opened", e);
 });
-this.docUpdated = DeviceEventEmitter.addListener('rnsyncDatabaseClosed', (e) => {
+this.docUpdated = eventEmitter.addListener('rnsyncDatabaseClosed', (e) => {
   console.log("store closed", e);
 });
-this.docDeleted = DeviceEventEmitter.addListener('rnsyncDatabaseCreated', (e) => {
+this.docDeleted = eventEmitter.addListener('rnsyncDatabaseCreated', (e) => {
   console.log("store created", e);
 });
-this.docDeleted = DeviceEventEmitter.addListener('rnsyncDatabaseDeleted', (e) => {
+this.docDeleted = eventEmitter.addListener('rnsyncDatabaseDeleted', (e) => {
   console.log("store deleted", e);
 });
 
-this.docDeleted = DeviceEventEmitter.addListener('rnsyncReplicationCompleted', (e) => {
+this.docDeleted = eventEmitter.addListener('rnsyncReplicationCompleted', (e) => {
   console.log(new Date(), "replication completed", e);
   console.log(new Date(), "starting another one");
-  RNSync.replicatePull(Config.COUCHDB_DB, 10);
+  //RNSync.replicatePull(Config.COUCHDB_DB, 10);
 });
-this.docDeleted = DeviceEventEmitter.addListener('rnsyncReplicationFailed', (e) => {
+this.docDeleted = eventEmitter.addListener('rnsyncReplicationFailed', (e) => {
   console.log("replication failed", e);
 });
 
-export function replicate() {
+export function replicateIos() {
   return RNSync
     .replicateIos(Config.COUCHDB_DB)
     .then(result => {
@@ -77,8 +80,8 @@ RNSync.init(Config.COUCHDB_URL, Config.COUCHDB_DB)
   .then(() => {
     console.log(new Date(), "RNSync going to replicate");
 
-    // RNSync.replicatePull(Config.COUCHDB_DB, 1);
-    replicate()
+    RNSync.replicatePull(Config.COUCHDB_DB, 1);
+    //replicateIos();
   })
   .catch(error => console.warn("RNSync init error", error));
 
