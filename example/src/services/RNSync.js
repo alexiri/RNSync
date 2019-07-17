@@ -49,6 +49,23 @@ this.docDeleted = DeviceEventEmitter.addListener('rnsyncReplicationFailed', (e) 
   console.log("replication failed", e);
 });
 
+export function replicate() {
+  return RNSync
+    .replicateIos(Config.COUCHDB_DB)
+    .then(result => {
+      console.log("RNSync replicatePull:", result);
+      if (result !== undefined) {
+        const nums = result.match(/\d+/g).map(Number);
+        if (nums[0] == 0) return; // No new documents replicated
+      }
+      countDocs();
+    })
+    .catch(error => {
+      console.log("RNSync replicatePull error:", error);
+    });
+}
+
+
 RNSync.init(Config.COUCHDB_URL, Config.COUCHDB_DB)
   .then(result => {
     console.log("RNSync init successfully!");
@@ -60,7 +77,8 @@ RNSync.init(Config.COUCHDB_URL, Config.COUCHDB_DB)
   .then(() => {
     console.log(new Date(), "RNSync going to replicate");
 
-    RNSync.replicatePull(Config.COUCHDB_DB, 1);
+    // RNSync.replicatePull(Config.COUCHDB_DB, 1);
+    replicate()
   })
   .catch(error => console.warn("RNSync init error", error));
 

@@ -1,0 +1,45 @@
+PODS:
+  - CDTDatastore (2.1.1):
+    - CDTDatastore/standard (= 2.1.1)
+  - CDTDatastore/common-dependencies (2.1.1):
+    - CDTDatastore/no-arc
+    - CocoaLumberjack (~> 2.0)
+    - "GoogleToolboxForMac/NSData+zlib (~> 2.1.1)"
+  - CDTDatastore/no-arc (2.1.1)
+  - CDTDatastore/standard (2.1.1):
+    - CDTDatastore/common-dependencies
+    - FMDB (= 2.6)
+  - CocoaLumberjack (2.4.0):
+    - CocoaLumberjack/Default (= 2.4.0)
+    - CocoaLumberjack/Extensions (= 2.4.0)
+  - CocoaLumberjack/Core (2.4.0)
+  - CocoaLumberjack/Default (2.4.0):
+    - CocoaLumberjack/Core
+  - CocoaLumberjack/Extensions (2.4.0):
+    - CocoaLumberjack/Default
+  - FMDB (2.6):
+    - FMDB/standard (= 2.6)
+  - FMDB/standard (2.6)
+  - GoogleToolboxForMac/Defines (2.1.4)
+  - "GoogleToolboxForMac/NSData+zlib (2.1.4)":
+    - GoogleToolboxForMac/Defines (= 2.1.4)
+
+DEPENDENCIES:
+  - CDTDatastore
+
+SPEC REPOS:
+  https://github.com/cocoapods/specs.git:
+    - CDTDatastore
+    - CocoaLumberjack
+    - FMDB
+    - GoogleToolboxForMac
+
+SPEC CHECKSUMS:
+  CDTDatastore: 8937d074212750ef73123f4935e4a2de1dc1a43c
+  CocoaLumberjack: aa9dcab71bdf9eaf2a63bbd9ddc87863efe45457
+  FMDB: c1968bab3ab0aed38f66cb778ae1e7fa9a652b6e
+  GoogleToolboxForMac: 91c824d21e85b31c2aae9bb011c5027c9b4e738f
+
+PODFILE CHECKSUM: 2e3bce43d7320ac6647a1a74e308d53d9238a7d6
+
+COCOAPODS: 1.7.4

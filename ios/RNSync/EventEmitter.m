@@ -19,6 +19,7 @@ RCT_EXPORT_MODULE();
     // Remove upstream listeners, stop unnecessary background tasks
 }
 
+// List of events that JS expects.
 - (NSArray<NSString *> *)supportedEvents
 {
   return @[@"rnsyncDocumentCreated", @"rnsyncDocumentUpdated", @"rnsyncDocumentDeleted",
