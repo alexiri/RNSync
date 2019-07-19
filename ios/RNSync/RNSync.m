@@ -101,15 +101,6 @@ RCT_EXPORT_METHOD(init: (NSString *)databaseUrl databaseName:(NSString*) databas
         }
     }
 
-
-    if(!manager) {
-        manager = [[CDTDatastoreManager alloc] initWithDirectory:path error:&error];
-    }
-
-    if(error)
-    {
-        datastores = [NSMutableDictionary new];
-    }
     if (!datastores) {
         datastores = [NSMutableDictionary new];
     }
