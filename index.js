@@ -346,22 +346,6 @@ export class RNSync
         });
     }
 
-    replicateIos ( datastoreName, callback )
-    {
-        callback = callback || noop;
-
-        return new Promise( ( resolve, reject ) =>
-        {
-            rnsyncModule.replicatePull( datastoreName, (error, msg) =>
-            {
-                callback( error, msg );
-                if(error) reject(error);
-                else resolve(msg)
-            })
-        });
-    }
-
-
     readAll ( datastoreName, callback )
     {
         callback = callback || noop;
