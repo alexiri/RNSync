@@ -11,7 +11,7 @@
 #import "CloudantSync.h"
 
 @implementation RNSyncDataStore
-{    
+{
     CDTDatastore *datastore;
     NSString *databaseName;
 }
@@ -23,20 +23,20 @@
     if (self = [super init] )
     {
         self->databaseName = databaseName;
-        
+
         datastore = [manager datastoreNamed:databaseName error:error];
-        
+
         if(*error)
-        {            
+        {
             return nil;
         }
-        
+
         CDTReplicatorFactory *replicatorFactory = [[CDTReplicatorFactory alloc] initWithDatastoreManager:manager];
-        
+
         NSURL *remoteDatabaseURL = [NSURL URLWithString:databaseUrl];
-        
+
         replicationManager = [[ReplicationManager alloc] initWithData:remoteDatabaseURL datastore:datastore replicatorFactory:replicatorFactory];
-        
+
         return self;
     }
     else {
