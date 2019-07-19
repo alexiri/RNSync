@@ -41,6 +41,8 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.FileOutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -59,6 +61,7 @@ import android.content.Context;
 import android.app.job.JobScheduler;
 import android.app.job.JobInfo;
 import android.app.job.JobInfo.Builder;
+import android.content.res.AssetManager;
 
 class Store {
     URI replicationUri;
@@ -129,6 +132,43 @@ public class RNSyncModule extends ReactContextBaseJavaModule {
         }
 
         callback.invoke();
+    }
+
+    @ReactMethod
+    public void initFromFile(String databaseUrl, String datastoreName, String dbDump, Callback callback) {
+        File path = super.getReactApplicationContext()
+                .getApplicationContext()
+                .getDir(datastoreDir, Context.MODE_PRIVATE);
+
+        File dbDir = new File(path, datastoreName);
+
+        if (!dbDir.isDirectory()) {
+            Log.i(TAG, "Database does not exist");
+            AssetManager assetManager = super.getReactApplicationContext()
+                .getApplicationContext()
+                .getAssets();
+
+            try {
+                dbDir.mkdirs();
+                try (InputStream in = assetManager.open(dbDump)) { //new FileInputStream(src)
+                    try (OutputStream out = new FileOutputStream(new File(dbDir, "db.sync"))) {
+                        // Transfer bytes from in to out
+                        byte[] buf = new byte[1024];
+                        int len;
+                        while ((len = in.read(buf)) > 0) {
+                            out.write(buf, 0, len);
+                        }
+                    }
+                }
+                Log.i(TAG, "Database created from file");
+            } catch (IOException e) {
+                Log.e(TAG, "Failed to copy file", e);
+                callback.invoke(e.getMessage());
+                return;
+            }
+        }
+
+        init(databaseUrl, datastoreName, callback);
     }
 
     @ReactMethod

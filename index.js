@@ -126,6 +126,20 @@ export class RNSync
         } )
     }
 
+    initFromFile( cloudantUrl, databaseName, dbDump)
+    {
+        this.databaseUrl = cloudantUrl + '/' + databaseName
+        this.databaseName = databaseName
+
+        return new Promise( ( resolve, reject ) =>
+        {
+            rnsyncModule.initFromFile( this.databaseUrl, this.databaseName, dbDump, error =>
+            {
+                error == null ? resolve() : reject( error )
+            } )
+        } )
+    }
+
     close( datastoreName, callback )
     {
         return new Promise( ( resolve, reject ) =>

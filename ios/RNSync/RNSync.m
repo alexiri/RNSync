@@ -14,6 +14,8 @@
 #import "RNSyncDataStore.h"
 #import "EventEmitter.h"
 
+#import "TD_Database.h"
+
 @interface EventWatcher : NSObject
 
 @end
@@ -136,6 +138,55 @@ RCT_EXPORT_METHOD(init: (NSString *)databaseUrl databaseName:(NSString*) databas
     notificationManagers[databaseName] = watcher;
 
     callback(@[[NSNull null]]);
+}
+
+RCT_EXPORT_METHOD(initFromFile: (NSString *)databaseUrl databaseName:(NSString*) databaseName dbDump:(NSString*) dbDump callback:(RCTResponseSenderBlock)callback)
+{
+    NSError *error = nil;
+    NSFileManager *fileManager= [NSFileManager defaultManager];
+
+    NSURL *documentsDir = [[fileManager URLsForDirectory:NSDocumentDirectory
+                                               inDomains:NSUserDomainMask] lastObject];
+    NSURL *storeURL = [documentsDir URLByAppendingPathComponent:@"datastores"];
+    NSString *path = [storeURL path];
+
+    if(!manager)
+    {
+        manager = [[CDTDatastoreManager alloc] initWithDirectory:path error:&error];
+
+        if(error)
+        {
+            callback(@[[NSNumber numberWithLong:error.code]]);
+            return;
+        }
+    }
+
+    NSString* dbPath = [manager pathForName:databaseName];
+
+    // If the DB files don't exist already, we copy them
+    if (![fileManager fileExistsAtPath:dbPath]) {
+        NSLog(@"Database not found at %@", dbPath);
+
+        // [fileManager copyItemAtPath:dbDump toPath:dbPath error:error];
+        // if(error)
+        // {
+        //     callback(@[[NSNumber numberWithLong:error.code]]);
+        //     return;
+        // }
+        TD_Database *db = [[TD_Database alloc] createEmptyDBAtPath:dbPath];
+        [db close]; // not necessary?
+        [db replaceWithDatabaseFile:dbDump error:&error];
+        if(error)
+        {
+            callback(@[[NSNumber numberWithLong:error.code]]);
+            return;
+        }
+
+        NSLog(@"Database copied successfully to %@", dbPath);
+    }
+
+    // Open the DB as usual
+    init(databaseUrl, databaseName, callback);
 }
 
 RCT_EXPORT_METHOD(compact:(NSString*) databaseName callback:(RCTResponseSenderBlock)callback)

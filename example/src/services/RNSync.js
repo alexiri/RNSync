@@ -69,7 +69,7 @@ export function replicateIos() {
 }
 
 
-RNSync.init(Config.COUCHDB_URL, Config.COUCHDB_DB)
+RNSync.initFromFile(Config.COUCHDB_URL, Config.COUCHDB_DB, "data/db.sync")
   .then(result => {
     console.log("RNSync init successfully!");
     RNSync.compact(Config.COUCHDB_DB)
